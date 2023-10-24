@@ -5,11 +5,16 @@ import logging
 from logging.handlers import SysLogHandler
 import requests
 
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        return json.dumps(record.msg)
+
 # Configure the logger to send logs to the syslog server
-logger = logging.getLogger()
+logger = logging.getLogger('slack_json')
 syslog_handler = SysLogHandler(address=('127.0.0.1', 514))
 logger.addHandler(syslog_handler)
 logger.setLevel(logging.INFO)
+syslog_handler.setFormatter(JSONFormatter())
 
 # This defines time range up to current time, delta can be modified to make the API call less frequently
 current_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -18,8 +23,7 @@ start_search_date = current_timestamp - delta
 timestamp_ms = int(start_search_date.timestamp())
 
 # Action list available: https://api.slack.com/admins/audit-logs-call#actions
-actions = 'anomaly,custom_tos_accepted,guest_created,guest_deactivated,guest_e,guest_e,guest_e,guest_joined_workspace,guest_reactivated,owner_transferred,permissions_assigned,permissions_removed,role_assigned,role_change_to_admin,role_change_to_guest,role_change_to_owner,role_change_to_user,role_removed,user_created,user_deactivated,user_email_updated,user_joined_workspace,user_login_failed,user_login,user_logout_compromised,user_logout_non_compliant_mobile_app_version,user_logout,user_password_reset_slack_security,user_profile_updated,user_reactivated'
-
+actions = 'user_login_failed,user_login,user_logout_compromised,user_logout_non_compliant_mobile_app_version,user_logout,'
 
 # Define the API endpoint and headers
 url = (f'https://api.slack.com/audit/v1/logs?action={actions}&oldest={timestamp_ms}')
@@ -50,4 +54,3 @@ try:
 except json.JSONDecodeError:
     # Log a JSON parsing error to the syslog server
     logger.error('Failed to parse JSON response from the API.')
-
